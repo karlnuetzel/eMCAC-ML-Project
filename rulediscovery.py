@@ -57,7 +57,7 @@ def createRule(attributeIndex, attributes, label, confidence, support, frequency
     rule = [attributeIndex, attributes, label, support, confidence, frequency, length]
     return rule
 
-#good luck
+
 def ruleDiscovery(validationSet, validationRep):
     legitimateIndexes = []
     suspiciousIndexes = []
@@ -87,10 +87,8 @@ def ruleDiscovery(validationSet, validationRep):
             specificAttributeTIDs = attr[idx]
             totalTimesAttributeSeen = len(specificAttributeTIDs)                                        
             if totalTimesAttributeSeen > 0:
-                #here is where we start looking for multi-attribute associations
                 tempAssociationList = []
                 for association in associationList:
-                    #this could get a little hairy....
                     attributeIdxList = association[associationAttributeIndex]
                     attributeValIdxList = association[associationAttributeValueIndex]
                     tids = association[associationTidsIndex]
@@ -102,8 +100,7 @@ def ruleDiscovery(validationSet, validationRep):
                         assoc = [newAssociationIdxList, newAssociationIdxValList, sharedTids]
                         tempAssociationList.append(assoc)    
                         
-                if len(tempAssociationList) > 0:
-                    associationList = associationList + tempAssociationList
+                associationList = associationList + tempAssociationList
                 association = [[attrIdx], [idx], specificAttributeTIDs]
                 associationList.append(association)
                 
@@ -129,19 +126,20 @@ def ruleDiscovery(validationSet, validationRep):
         
         decisionC1 = pruner(supportC1, confidenceC1)
         decisionC2 = pruner(supportC2, confidenceC2)
-        decisionC3 = pruner(supportC3, confidenceC3)        
+        decisionC3 = pruner(supportC3, confidenceC3)
         
+        #class is a list for future multilabel rules
         if decisionC1:
-            length = len(tidsC1)
-            genRule = createRule(associationAttrIdx, associationIdx, legitimate, confidenceC1, supportC1, frequencyC1, length)
+            length = len(associationAttrIdx)
+            genRule = createRule(associationAttrIdx, associationIdx, [legitimate], confidenceC1, supportC1, frequencyC1, length)
             ruleList.append(genRule)
-        if decisionC2:
-            length = len(tidsC2)
-            genRule = createRule(associationAttrIdx, associationIdx, suspicious, confidenceC2, supportC2, frequencyC2, length)
+        if decisionC2:       
+            length = len(associationAttrIdx)
+            genRule = createRule(associationAttrIdx, associationIdx, [suspicious], confidenceC2, supportC2, frequencyC2, length)
             ruleList.append(genRule)
         if decisionC3:
-            length = len(tidsC3)
-            genRule = createRule(associationAttrIdx, associationIdx, phishy, confidenceC3, supportC3, frequencyC3, length)
-            ruleList.append(genRule)        
+            length = len(associationAttrIdx)
+            genRule = createRule(associationAttrIdx, associationIdx, [phishy], confidenceC3, supportC3, frequencyC3, length)
+            ruleList.append(genRule)
             
     return ruleList

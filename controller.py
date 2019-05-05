@@ -1,7 +1,9 @@
 from rulediscovery import *
 import operator
+import random
 #eMCAC reference
 #https://www.sciencedirect.com/science/article/pii/S2210832714000210
+#https://pdfs.semanticscholar.org/cd9b/b609a7c42461c357d30c51937f4f0d850506.pdf
 #Data Source
 #http://archive.ics.uci.edu/ml/datasets/Website+Phishing
 legitimate = 1
@@ -11,6 +13,31 @@ phishy = -1
 legitimateIndex = 0
 suspiciousIndex = 1
 phishyIndex = 2
+
+def ruleCoveragePruner(validationData, rules):
+    correspondingVal = [1, 0, -1]
+    attributeIndex = 0
+    attributeValIndex = 1
+    classIDIndex = 2
+    decisionClass = None
+    for rule in rules:
+        attributes = rule[attributeIndex]
+        amountOfAttributesInRule = len(attributes)
+        attributeVals = rule[attributeValIndex]
+        for i, attr in enumerate(attributes):
+            index = attributeVals[i]
+            #does the test attribute correspond to the rule attribute
+            if validationData[attr] == correspondingVal[index]:
+                #continue....
+                #lets check if we passed every attribute rule
+                if amountOfAttributesInRule == (i+1):
+                    #it matches return the rule that worked
+                    return rule
+            else:
+                #it doesnt correspond so this rule isnt valid (SKIP!)
+                break
+    return 0    
+    
 
 def classifier(testData, rules):
     correspondingVal = [1, 0, -1]
@@ -23,7 +50,7 @@ def classifier(testData, rules):
         attributes = rule[attributeIndex]
         amountOfAttributesInRule = len(attributes)
         attributeVals = rule[attributeValIndex]
-        classID = rule[classIDIndex]
+        classes = rule[classIDIndex]
         for i, attr in enumerate(attributes):
             index = attributeVals[i]
             #does the test attribute correspond to the rule attribute
@@ -32,7 +59,7 @@ def classifier(testData, rules):
                 #lets check if we passed every attribute rule
                 if amountOfAttributesInRule == (i+1):
                     #it matches the rule completely --> classify
-                    return classID
+                    return classes[0]
             else:
                 #it doesnt correspond so this rule isnt valid (SKIP!)
                 break
@@ -61,9 +88,7 @@ def mcac():
     
     validationSet = legitimate_matrix[0:splitLegitimateSize] + suspicious_matrix[0:splitSuspiciousSize] + phishy_matrix[0:splitPhishingSize]
     testingSet = legitimate_matrix[splitLegitimateSize:] + suspicious_matrix[splitSuspiciousSize:] + phishy_matrix[splitPhishingSize:]
-
-    #for dat in validationSet:
-        #print(dat)    
+    testingSize = len(testingSet)  
     
     validationRep = createVerticalRepresentation(validationSet, attributeCount)
     rules = ruleDiscovery(validationSet, validationRep)
@@ -74,11 +99,20 @@ def mcac():
     frequencyIndex = 5
     
     rules = sorted(rules, key = operator.itemgetter(confidenceIndex, suportIndex, lengthIndex, frequencyIndex), reverse=True)
-    #rules.sort(key=lambda x: float(x[confidenceIndex]), reverse=True)
-    for r in rules:
-        print(r[2])
-    print(len(rules))
     
+    #for r in rules:
+        #print(r)
+    #print(len(rules))
+    
+    #i should really use sets....
+    prunedRules = []
+    for v in validationSet:
+        rule = ruleCoveragePruner(v, rules)
+        if rule not in prunedRules:
+            prunedRules.append(rule)        
+
+    prunedRules = sorted(prunedRules, key = operator.itemgetter(confidenceIndex, suportIndex, lengthIndex, frequencyIndex), reverse=True)
+
     legitimateCount = 0
     suspiciousCount = 0
     phishyCount = 0    
@@ -93,10 +127,12 @@ def mcac():
     decisionLegitimateCount = 0
     decisionSuspiciousCount = 0
     decisionPhishyCount = 0
-    
+    misclassification = 0
     for test in testingSet:
-        #realLabel = test[labelIndex]
-        decision = classifier(test, rules)
+        realLabel = test[labelIndex]
+        decision = classifier(test, prunedRules)
+        if decision != realLabel:
+            misclassification += 1
         if decision == legitimate:
             decisionLegitimateCount += 1
         if decision == suspicious:
@@ -117,5 +153,6 @@ def mcac():
     print(decisionSuspiciousCount)
     print("Phishing:")
     print(decisionPhishyCount)
-    
+    print("Accuracy")
+    print(1-(misclassification/testingSize))
 mcac()
